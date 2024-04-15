@@ -18,7 +18,7 @@ public class CheeseBullet : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        movement = new Vector3(0.03f, 0, 0);
+        movement = new Vector3(0.015f, 0, 0);
         minPosition = Camera.main.ScreenToWorldPoint(Vector3.zero);
         maxPosition = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, 0f));
     }
@@ -26,6 +26,8 @@ public class CheeseBullet : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        minPosition = Camera.main.ScreenToWorldPoint(Vector3.zero);
+        maxPosition = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, 0f));
         transform.position += movement;
         if (transform.position.x >= maxPosition.x)
         {

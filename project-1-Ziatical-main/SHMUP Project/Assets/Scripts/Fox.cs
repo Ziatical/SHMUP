@@ -6,7 +6,7 @@ public class Fox : MonoBehaviour
 {
     private Vector3 minPosition;
     private Vector3 maxPosition;
-    private Vector3 movement;
+    public Vector3 movement;
     public GameObject mouse;
     public GameManager gameManager;
     private int timeToShoot;
@@ -30,6 +30,8 @@ public class Fox : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        minPosition = Camera.main.ScreenToWorldPoint(Vector3.zero);
+        maxPosition = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, 0f));
         transform.position += movement;
         if (transform.position.x <= minPosition.x)
         {
