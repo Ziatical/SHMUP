@@ -12,6 +12,12 @@ public class Cat : MonoBehaviour
     private int timeToShoot;
     public List<GameObject> bullets = new List<GameObject>();
     public GameObject hairballBullet;
+
+    public State currentState;
+
+    //Rock current issue
+    Rock issuedRock;
+
     // Start is called before the first frame update
     void Awake()
     {
@@ -24,7 +30,6 @@ public class Cat : MonoBehaviour
         minPosition = Camera.main.ScreenToWorldPoint(Vector3.zero);
         maxPosition = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, 0f));
         timeToShoot = 0;
-
     }
 
     // Update is called once per frame
@@ -61,5 +66,51 @@ public class Cat : MonoBehaviour
             timeToShoot = -1;
         }
         timeToShoot++;
+
+        if (currentState == State.Seek)
+        {
+
+        }
+        else if (currentState == State.Shoot)
+        {
+
+        }
+        else if (currentState == State.Manuever)
+        {
+            //getting issued rock
+            foreach (Rock rock in gameManager.rocks)
+            {
+                // Check collision with the current rock
+                if (rock.Colliding(this.gameObject) != null)
+                {
+                    // Collision detected with a rock, update movement and exit loop
+                    if (this.gameObject.transform.position.y > Screen.height / 2)
+                    {
+                        movement = new Vector3(0, -0.003f, 0);
+                        issuedRock = rock;
+                        break;
+                    }
+                    else if (this.gameObject.transform.position.y <= Screen.height / 2)
+                    {
+                        movement = new Vector3(0, 0.003f, 0);
+                        issuedRock = rock;
+                        break;
+                    }
+                }
+
+            }
+            if (issuedRock == null || issuedRock.Colliding(this.gameObject) == null)
+            {
+                movement = new Vector3(-0.003f, 0, 0);
+                currentState = State.Seek;
+            }
+        }
+    }
+
+    public enum State
+    {
+        Seek,
+        Shoot,
+        Manuever
     }
 }

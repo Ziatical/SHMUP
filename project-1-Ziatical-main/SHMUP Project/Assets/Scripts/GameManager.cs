@@ -79,7 +79,7 @@ public class GameManager : MonoBehaviour
                     // Change state of cat to move around rock
                     // stop movement
                     Cat catSrc = catG.GetComponent<Cat>();
-                    catSrc.movement = new Vector3(0,0,0);
+                    catSrc.currentState = Cat.State.Manuever;
                 }
             }
         }
@@ -94,7 +94,7 @@ public class GameManager : MonoBehaviour
                     // Change state of cat to move around rock
                     // stop movement
                     Fox foxSrc = foxG.GetComponent<Fox>();
-                    foxSrc.movement = new Vector3(0, 0, 0);
+                    foxSrc.currentState = Fox.State.Manuever;
                 }
             }
         }
@@ -102,12 +102,23 @@ public class GameManager : MonoBehaviour
         //Checking if Rocks collide with player
         foreach (Rock rock in rocks)
         {
+            Mouse mouseSrc = mouse.GetComponent<Mouse>();
             if (rock.Colliding(mouse) != null)
             {
                 // stop front movement ONLY
-                Mouse mouseSrc = mouse.GetComponent<Mouse>();
-                mouseSrc.velocity.x = 0;
+                mouseSrc.move = false;
+                if (mouse.transform.position.y < Screen.height && mouse.transform.position.y > Screen.height / 2)
+                {
+                    Vector3 moveM = new Vector3(0, -0.03f, 0);
+                    mouse.transform.position += moveM;
+                }
+                else
+                {
+                    Vector3 moveM = new Vector3(0, 0.03f, 0);
+                    mouse.transform.position += moveM;
+                }
             }
+            mouseSrc.move = true;
         }
     }
 }

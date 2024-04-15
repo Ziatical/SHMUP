@@ -11,6 +11,7 @@ public class Mouse : MonoBehaviour
     public Vector2 velocity = Vector2.zero;
     private Vector2 movementInput;
     public List<GameObject> bullets = new List<GameObject>();
+    public bool move = true;
     // Start is called before the first frame update
     void Start()
     {
@@ -21,9 +22,12 @@ public class Mouse : MonoBehaviour
     void Update()
     {
         ScreenStop();
-        direction = movementInput;
-        velocity = direction * speed * Time.deltaTime;
-        transform.position += (Vector3)velocity;
+        if (move)
+        {
+            direction = movementInput;
+            velocity = direction * speed * Time.deltaTime;
+            transform.position += (Vector3)velocity;
+        }
     }
 
     //onMove

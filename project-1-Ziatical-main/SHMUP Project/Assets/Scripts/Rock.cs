@@ -47,7 +47,7 @@ public class Rock : MonoBehaviour
 
             SpriteRenderer objSp = obj.gameObject.GetComponent<SpriteRenderer>();
             Vector2 maxXY2 = objSp.bounds.max;
-            Vector2 minXY2 = objSp.bounds.max;
+            Vector2 minXY2 = objSp.bounds.min;
 
             // Check for collision between this Rock and the other object
             if (((minXY1.x < maxXY2.x) && (maxXY1.x > minXY2.x)) && ((maxXY1.y > minXY2.y) && (minXY1.y < maxXY2.y)))
