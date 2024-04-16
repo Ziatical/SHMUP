@@ -12,20 +12,108 @@ public class Mouse : MonoBehaviour
     private Vector2 movementInput;
     public List<GameObject> bullets = new List<GameObject>();
     public bool move = true;
+    public GameManager gameManager;
+
+    //power up lists
+    public List<Health> healths = new List<Health>();
+    private Health currentHealth;
+    public List<MoreBullets> more = new List<MoreBullets>();
+    private MoreBullets currentMoreBullets;
+    public List<Slow> slows = new List<Slow>();
+    private Slow currentSlow;
+    public List<Faster> faster = new List<Faster>();
+    private Faster currentFaster;
+
+
     // Start is called before the first frame update
     void Start()
     {
-
+        gameManager = GameObject.Find("GameManager").GetComponent<GameManager>();
     }
 
     // Update is called once per frame
     void Update()
     {
+        // bullets
+        foreach (MoreBullets bullet in more)
+        {
+            if (bullet.Colliding(this.gameObject) != null)
+            {
+                bullet.currentSprite.enabled = false;
+                currentMoreBullets = bullet;
+                currentMoreBullets.countdown = true;
+            }
+        }
+
+        //regen
+        foreach (Health hea in healths)
+        {
+            if (hea.Colliding(this.gameObject) != null)
+            {
+                hea.currentSprite.enabled = false;
+                currentHealth = hea;
+                currentHealth.countdown = true;
+            }
+        }
+        if (currentHealth.countdown && currentHealth != null && gameManager.health < gameManager.maxHealth)
+        {
+            gameManager.health += 0.5f;
+        }
+
+        // slowed enemies
+        foreach (Slow slow in slows)
+        {
+            if (slow.Colliding(this.gameObject) != null)
+            {
+                slow.currentSprite.enabled = false;
+                currentSlow = slow;
+                currentSlow.countdown = true;
+            }
+        }
+        if (currentSlow.countdown && currentSlow != null)
+        {
+            foreach (GameObject cat in gameManager.cats)
+            {
+                Cat catS = cat.GetComponent<Cat>();
+                catS.speed = 0.001f;
+            }
+            foreach(GameObject fox in gameManager.foxes)
+            {
+                Fox foxS = fox.GetComponent<Fox>();
+                foxS.speed = 0.001f;
+            }
+        }
+        else
+        {
+            foreach (GameObject cat in gameManager.cats)
+            {
+                Cat catS = cat.GetComponent<Cat>();
+                catS.speed = 0.003f;
+            }
+            foreach (GameObject fox in gameManager.foxes)
+            {
+                Fox foxS = fox.GetComponent<Fox>();
+                foxS.speed = 0.003f;
+            }
+        }
         ScreenStop();
         if (move)
         {
             direction = movementInput;
             velocity = direction * speed * Time.deltaTime;
+            foreach(Faster fast in faster)
+            {
+                if (fast.Colliding(this.gameObject) != null)
+                {
+                    fast.currentSprite.enabled = false;
+                    currentFaster = fast;
+                    currentFaster.countdown = true;
+                }
+            }
+            if (currentFaster.countdown && currentFaster != null)
+            {
+                velocity = velocity * 2;
+            }
             transform.position += (Vector3)velocity;
 
             // Flip mouse based on movement direction
@@ -46,6 +134,13 @@ public class Mouse : MonoBehaviour
     {
         if (context.performed)
         {
+            if (currentMoreBullets.countdown && currentMoreBullets != null)
+            {
+                GameObject bullet2 = Instantiate(bulletCheese, transform.position + new Vector3(direction.x * 0.2f, 0, 0), Quaternion.identity);
+                bullet2.transform.localScale = new Vector3(transform.localScale.x, 1, 1); // Ensure bullet faces the right direction
+                bullet2.GetComponent<CheeseBullet>().SetMovementDirection(transform.localScale.x); // Add this method to CheeseBullet
+                bullets.Add(bullet2);
+            }
             GameObject bullet = Instantiate(bulletCheese, transform.position + new Vector3(direction.x * 0.2f, 0, 0), Quaternion.identity);
             bullet.transform.localScale = new Vector3(transform.localScale.x, 1, 1); // Ensure bullet faces the right direction
             bullet.GetComponent<CheeseBullet>().SetMovementDirection(transform.localScale.x); // Add this method to CheeseBullet
