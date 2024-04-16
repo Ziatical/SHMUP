@@ -28,49 +28,58 @@ public class Mouse : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        gameManager = GameObject.Find("GameManager").GetComponent<GameManager>();
+        
     }
 
     // Update is called once per frame
     void Update()
     {
         // bullets
-        foreach (MoreBullets bullet in more)
+        if (more[0] != null)
         {
-            if (bullet.Colliding(this.gameObject) != null)
+            foreach (MoreBullets bullet in more)
             {
-                bullet.currentSprite.enabled = false;
-                currentMoreBullets = bullet;
-                currentMoreBullets.countdown = true;
+                if (bullet.Colliding(this.gameObject) != null)
+                {
+                    bullet.currentSprite.enabled = false;
+                    currentMoreBullets = bullet;
+                    currentMoreBullets.countdown = true;
+                }
             }
         }
 
         //regen
-        foreach (Health hea in healths)
+        if (healths[0] != null)
         {
-            if (hea.Colliding(this.gameObject) != null)
+            foreach (Health hea in healths)
             {
-                hea.currentSprite.enabled = false;
-                currentHealth = hea;
-                currentHealth.countdown = true;
+                if (hea.Colliding(this.gameObject) != null)
+                {
+                    hea.currentSprite.enabled = false;
+                    currentHealth = hea;
+                    currentHealth.countdown = true;
+                }
             }
         }
-        if (currentHealth.countdown && currentHealth != null && gameManager.health < gameManager.maxHealth)
+        if (currentHealth != null && currentHealth.countdown && gameManager.health < gameManager.maxHealth)
         {
             gameManager.health += 0.5f;
         }
 
-        // slowed enemies
-        foreach (Slow slow in slows)
+        if (slows[0] != null)
         {
-            if (slow.Colliding(this.gameObject) != null)
+            // slowed enemies
+            foreach (Slow slow in slows)
             {
-                slow.currentSprite.enabled = false;
-                currentSlow = slow;
-                currentSlow.countdown = true;
+                if (slow.Colliding(this.gameObject) != null)
+                {
+                    slow.currentSprite.enabled = false;
+                    currentSlow = slow;
+                    currentSlow.countdown = true;
+                }
             }
         }
-        if (currentSlow.countdown && currentSlow != null)
+        if (currentSlow != null && currentSlow.countdown)
         {
             foreach (GameObject cat in gameManager.cats)
             {
@@ -101,16 +110,19 @@ public class Mouse : MonoBehaviour
         {
             direction = movementInput;
             velocity = direction * speed * Time.deltaTime;
-            foreach(Faster fast in faster)
+            if (faster[0] != null)
             {
-                if (fast.Colliding(this.gameObject) != null)
+                foreach (Faster fast in faster)
                 {
-                    fast.currentSprite.enabled = false;
-                    currentFaster = fast;
-                    currentFaster.countdown = true;
+                    if (fast.Colliding(this.gameObject) != null)
+                    {
+                        fast.currentSprite.enabled = false;
+                        currentFaster = fast;
+                        currentFaster.countdown = true;
+                    }
                 }
             }
-            if (currentFaster.countdown && currentFaster != null)
+            if (currentFaster != null && currentFaster.countdown)
             {
                 velocity = velocity * 2;
             }
@@ -134,7 +146,7 @@ public class Mouse : MonoBehaviour
     {
         if (context.performed)
         {
-            if (currentMoreBullets.countdown && currentMoreBullets != null)
+            if (currentMoreBullets != null && currentMoreBullets.countdown)
             {
                 GameObject bullet2 = Instantiate(bulletCheese, transform.position + new Vector3(direction.x * 0.2f, 0, 0), Quaternion.identity);
                 bullet2.transform.localScale = new Vector3(transform.localScale.x, 1, 1); // Ensure bullet faces the right direction

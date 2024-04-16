@@ -47,11 +47,14 @@ public class GameManager : MonoBehaviour
                 continue;
             }
             // Log positions and states
-            Debug.Log($"Cat {i} at position {cats[i].transform.position}");
         }
     }
         minPosition = Camera.main.ScreenToWorldPoint(Vector3.zero);
         maxPosition = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, 0f));
+        if (maxPosition.x > 37f)
+        {
+            SceneManager.LoadScene(2);
+        }
         healthBar.value = health/maxHealth;
         scoreCounter.text = $"Score: {score.ToString("00000")}";
         if (spawnCheck == spawnTime)
@@ -108,28 +111,6 @@ public class GameManager : MonoBehaviour
                     foxSrc.currentState = Fox.State.Manuever;
                 }
             }
-        }
-
-        //Checking if Rocks collide with player
-        foreach (Rock rock in rocks)
-        {
-            Mouse mouseSrc = mouse.GetComponent<Mouse>();
-            if (rock.Colliding(mouse) != null)
-            {
-                // stop front movement ONLY
-                mouseSrc.move = false;
-                if (mouse.transform.position.y < Screen.height && mouse.transform.position.y > Screen.height / 2)
-                {
-                    Vector3 moveM = new Vector3(0, -0.03f, 0);
-                    mouse.transform.position += moveM;
-                }
-                else
-                {
-                    Vector3 moveM = new Vector3(0, 0.03f, 0);
-                    mouse.transform.position += moveM;
-                }
-            }
-            mouseSrc.move = true;
         }
     }
 }

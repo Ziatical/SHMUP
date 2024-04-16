@@ -161,7 +161,6 @@ public class Cat : MonoBehaviour
             target = new Coordinate(Mathf.RoundToInt(mousePosition.x) - 5, Mathf.RoundToInt(mousePosition.y));
         }
 
-        Debug.Log($"Updated Pathfinding: from ({start.x}, {start.y}) to ({target.x}, {target.y})");
         path = AStar.FindPath(start, target);
         currentWaypointIndex = 0;
     }
