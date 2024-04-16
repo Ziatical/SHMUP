@@ -39,6 +39,17 @@ public class GameManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (cats != null) {
+        for (int i = 0; i < cats.Count; i++)
+        {
+            if (cats[i] == null) {
+                Debug.LogError($"Cat at index {i} is null.");
+                continue;
+            }
+            // Log positions and states
+            Debug.Log($"Cat {i} at position {cats[i].transform.position}");
+        }
+    }
         minPosition = Camera.main.ScreenToWorldPoint(Vector3.zero);
         maxPosition = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, 0f));
         healthBar.value = health/maxHealth;
@@ -120,5 +131,104 @@ public class GameManager : MonoBehaviour
             }
             mouseSrc.move = true;
         }
+    }
+}
+
+public class AStar
+{
+    // Find a path from start to target coordinates
+    public static List<Coordinate> FindPath(Coordinate start, Coordinate target)
+    {
+        List<Coordinate> openList = new List<Coordinate>();
+        HashSet<Coordinate> closedList = new HashSet<Coordinate>();
+        Dictionary<Coordinate, Coordinate> parentMap = new Dictionary<Coordinate, Coordinate>();
+        Dictionary<Coordinate, int> costMap = new Dictionary<Coordinate, int>();
+
+        openList.Add(start);
+        costMap[start] = 0;
+
+        while (openList.Count > 0)
+        {
+            Coordinate current = FindLowestCostCoordinate(openList, costMap, target);
+            openList.Remove(current);
+
+            if (current.Equals(target))
+            {
+                return ReconstructPath(start, target, parentMap);
+            }
+
+            closedList.Add(current);
+
+            List<Coordinate> neighbors = GetNeighbors(current);
+            foreach (Coordinate neighbor in neighbors)
+            {
+                if (closedList.Contains(neighbor))
+                {
+                    continue;
+                }
+
+                int tentativeCost = costMap[current] + 1;
+                if (!openList.Contains(neighbor) || tentativeCost < costMap[neighbor])
+                {
+                    costMap[neighbor] = tentativeCost;
+                    parentMap[neighbor] = current;
+
+                    if (!openList.Contains(neighbor))
+                    {
+                        openList.Add(neighbor);
+                    }
+                }
+            }
+        }
+
+        // No path found
+        return new List<Coordinate>();
+    }
+
+    // Find the coordinate with the lowest total cost in the open list
+    private static Coordinate FindLowestCostCoordinate(List<Coordinate> openList, Dictionary<Coordinate, int> costMap, Coordinate target)
+    {
+        int minCost = int.MaxValue;
+        Coordinate minCostCoordinate = null;
+        foreach (Coordinate coordinate in openList)
+        {
+            int totalCost = costMap[coordinate] + coordinate.ManhattanDistance(target);
+            if (totalCost < minCost)
+            {
+                minCost = totalCost;
+                minCostCoordinate = coordinate;
+            }
+        }
+        return minCostCoordinate;
+    }
+
+    // Reconstruct path from start to target coordinates using parent map
+    private static List<Coordinate> ReconstructPath(Coordinate start, Coordinate target, Dictionary<Coordinate, Coordinate> parentMap)
+    {
+        List<Coordinate> path = new List<Coordinate>();
+        Coordinate current = target;
+
+        while (!current.Equals(start))
+        {
+            path.Add(current);
+            if (!parentMap.ContainsKey(current))
+            {
+                Debug.LogError($"Missing parent for coordinate: {current.x}, {current.y}");
+                break; // Break the loop if no parent is found to avoid crashing
+            }
+            current = parentMap[current];
+        }
+        path.Reverse();
+        return path;
+    }
+
+    // Get neighboring coordinates of a given coordinate (up, down, left, right)
+    private static List<Coordinate> GetNeighbors(Coordinate coordinate)
+    {
+        List<Coordinate> neighbors = new List<Coordinate>();
+        neighbors.Add(new Coordinate(coordinate.x - 1, coordinate.y)); // Left
+        neighbors.Add(new Coordinate(coordinate.x, coordinate.y + 1)); // Up
+        neighbors.Add(new Coordinate(coordinate.x, coordinate.y - 1)); // Down
+        return neighbors;
     }
 }

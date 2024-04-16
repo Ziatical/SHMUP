@@ -16,7 +16,7 @@ public class HairballBullet : MonoBehaviour
     {
         gameManager = GameObject.Find("GameManager").GetComponent<GameManager>();
         mouse = GameObject.Find("Mouse").GetComponent<Mouse>();
-        movement = new Vector3(0.015f, 0, 0);
+        movement = (transform.localScale.x < 0 ? new Vector3(-0.015f, 0, 0) : new Vector3(0.015f, 0, 0)); // Speed set to match current speed but direction is dynamic
         minPosition = Camera.main.ScreenToWorldPoint(Vector3.zero);
         maxPosition = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, 0f));
     }
@@ -27,7 +27,7 @@ public class HairballBullet : MonoBehaviour
         minPosition = Camera.main.ScreenToWorldPoint(Vector3.zero);
         maxPosition = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, 0f));
         transform.position -= movement;
-        if (transform.position.x <= minPosition.x)
+        if (transform.position.x <= minPosition.x || transform.position.x >= maxPosition.x)
         {
             foreach(GameObject catObj in gameManager.cats)
             {
@@ -85,5 +85,10 @@ public class HairballBullet : MonoBehaviour
                 }
             }
         }
+    }
+
+    public void InitializeDirection(float directionX)
+    {
+        movement = new Vector3(0.015f * directionX, 0, 0); // Adjust the movement vector based on the direction
     }
 }

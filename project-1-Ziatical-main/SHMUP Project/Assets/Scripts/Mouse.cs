@@ -27,6 +27,12 @@ public class Mouse : MonoBehaviour
             direction = movementInput;
             velocity = direction * speed * Time.deltaTime;
             transform.position += (Vector3)velocity;
+
+            // Flip mouse based on movement direction
+            if (direction.x < 0)
+                transform.localScale = new Vector3(-1, 1, 1);
+            else if (direction.x > 0)
+                transform.localScale = new Vector3(1, 1, 1);
         }
     }
 
@@ -38,23 +44,13 @@ public class Mouse : MonoBehaviour
     //onSHoot
     public void OnShoot(InputAction.CallbackContext context)
     {
-        if (!gameObject.activeInHierarchy) // or if (!gameObject.scene.IsValid())
+        if (context.performed)
         {
-            return;
+            GameObject bullet = Instantiate(bulletCheese, transform.position + new Vector3(direction.x * 0.2f, 0, 0), Quaternion.identity);
+            bullet.transform.localScale = new Vector3(transform.localScale.x, 1, 1); // Ensure bullet faces the right direction
+            bullet.GetComponent<CheeseBullet>().SetMovementDirection(transform.localScale.x); // Add this method to CheeseBullet
+            bullets.Add(bullet);
         }
-        if (context.started)
-        {
-            return;
-        }
-        if (context.canceled)
-        {
-            return;
-        }
-        if(context.performed)
-        {
-            bullets.Add(Instantiate(bulletCheese, new Vector3((this.gameObject.transform.position.x + .2f), this.gameObject.transform.position.y, 0f), Quaternion.identity));
-        }
-        return;
     }
 
     //stop at edge of screen

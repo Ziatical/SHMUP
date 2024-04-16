@@ -18,7 +18,7 @@ public class CheeseBullet : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        movement = new Vector3(0.015f, 0, 0);
+        movement = (transform.localScale.x < 0 ? new Vector3(-0.015f, 0, 0) : new Vector3(0.015f, 0, 0)); // Speed set to match current speed but direction is dynamic
         minPosition = Camera.main.ScreenToWorldPoint(Vector3.zero);
         maxPosition = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, 0f));
     }
@@ -29,10 +29,9 @@ public class CheeseBullet : MonoBehaviour
         minPosition = Camera.main.ScreenToWorldPoint(Vector3.zero);
         maxPosition = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, 0f));
         transform.position += movement;
-        if (transform.position.x >= maxPosition.x)
+        if (transform.position.x <= minPosition.x || transform.position.x >= maxPosition.x)
         {
-            Destroy(this.gameObject);
-            mouse.bullets.Remove(this.gameObject);
+            SafeDestroy();
         }
         //current bullet position and location
         SpriteRenderer bulletSprite = this.GetComponent<SpriteRenderer>();
@@ -78,5 +77,19 @@ public class CheeseBullet : MonoBehaviour
                 return;
             }
         }
+    }
+
+    public void SetMovementDirection(float direction)
+    {
+        movement = new Vector3(0.015f * direction, 0, 0); // Assumes positive right, negative left
+    }
+
+    private void SafeDestroy()
+    {
+        if (mouse.bullets.Contains(gameObject))
+        {
+            mouse.bullets.Remove(gameObject);
+        }
+        Destroy(gameObject);
     }
 }

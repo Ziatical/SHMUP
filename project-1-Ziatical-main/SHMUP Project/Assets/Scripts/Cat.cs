@@ -13,6 +13,11 @@ public class Cat : MonoBehaviour
     public List<GameObject> bullets = new List<GameObject>();
     public GameObject hairballBullet;
 
+    //A* Stuff
+    public float speed = 0.003f; // Adjust speed as needed
+    private List<Coordinate> path; // Store the path from cat to mouse
+    private int currentWaypointIndex = 0; // Index of current waypoint in the path
+
     public State currentState;
 
     //Rock current issue
@@ -37,7 +42,7 @@ public class Cat : MonoBehaviour
     {
         minPosition = Camera.main.ScreenToWorldPoint(Vector3.zero);
         maxPosition = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, 0f));
-        transform.position += movement;
+        
         if (transform.position.x <= minPosition.x)
         {
             gameManager.cats.Remove(this.gameObject);
@@ -60,20 +65,27 @@ public class Cat : MonoBehaviour
             Destroy(this.gameObject);
             gameManager.health -= 10;
         }
-        if (timeToShoot == 1000)
-        {
-            bullets.Add(Instantiate(hairballBullet, new Vector3((this.gameObject.transform.position.x - .2f), this.gameObject.transform.position.y, 0f), Quaternion.identity));
-            timeToShoot = -1;
-        }
-        timeToShoot++;
 
+        // Calculate positions and determine the direction to face based on the mouse's position
+        Vector3 mousePosition = mouse.transform.position;
+
+        // Flipping logic based on relative position to the mouse
+        if (transform.position.x < mousePosition.x && transform.localScale.x != 1)
+        {
+            // Face right when mouse is to the right
+            transform.localScale = new Vector3(1, 1, 1);
+        }
+        else if (transform.position.x > mousePosition.x && transform.localScale.x != -1)
+        {
+            // Face left when mouse is to the left
+            transform.localScale = new Vector3(-1, 1, 1);
+        }
+
+        // Update position and handle flipping
         if (currentState == State.Seek)
         {
-
-        }
-        else if (currentState == State.Shoot)
-        {
-
+            FindPathToMouse();
+            MoveAlongPath();
         }
         else if (currentState == State.Manuever)
         {
@@ -105,12 +117,93 @@ public class Cat : MonoBehaviour
                 currentState = State.Seek;
             }
         }
+
+        HandleFlipping();
+
+        if (timeToShoot >= 1000)
+        {
+            bullets.Add(Instantiate(hairballBullet, new Vector3((this.gameObject.transform.position.x - .2f), this.gameObject.transform.position.y, 0f), Quaternion.identity));
+            timeToShoot = 0;
+        }
+        timeToShoot++;
+
     }
+
+    void HandleFlipping()
+    {
+        Vector3 mousePosition = mouse.transform.position;
+        SpriteRenderer spriteRenderer = GetComponent<SpriteRenderer>();
+
+        // Determine if the character should face left or right based on the mouse position
+        bool shouldFaceLeft = transform.position.x > mousePosition.x;
+
+        // Use SpriteRenderer's flipX to control the direction the sprite faces
+        spriteRenderer.flipX = shouldFaceLeft;
+    }
+
+    // Find a path from the cat's current position to the mouse's position
+    private void FindPathToMouse()
+    {
+        Vector3 catPosition = transform.position;
+        Vector3 mousePosition = mouse.transform.position;
+
+        Coordinate start = new Coordinate(Mathf.RoundToInt(catPosition.x), Mathf.RoundToInt(catPosition.y));
+        Coordinate target;
+
+        // Preventing rightward target setting
+        if (catPosition.x > mousePosition.x)
+        {
+            target = new Coordinate(Mathf.RoundToInt(mousePosition.x), Mathf.RoundToInt(mousePosition.y));
+        }
+        else
+        {
+            // Set target further left if passed
+            target = new Coordinate(Mathf.RoundToInt(mousePosition.x) - 5, Mathf.RoundToInt(mousePosition.y));
+        }
+
+        Debug.Log($"Updated Pathfinding: from ({start.x}, {start.y}) to ({target.x}, {target.y})");
+        path = AStar.FindPath(start, target);
+        currentWaypointIndex = 0;
+    }
+
+
+    // Move the cat along the path
+    private void MoveAlongPath()
+    {
+        if (path != null && currentWaypointIndex < path.Count)
+        {
+            if (mouse == null)
+            {
+                Debug.LogError("Mouse reference lost, stopping movement.");
+                return; // Stop updating the path if the mouse is destroyed or lost
+            }
+
+            Vector3 nextWaypoint = new Vector3(path[currentWaypointIndex].x, path[currentWaypointIndex].y, transform.position.z);
+            transform.position = Vector3.MoveTowards(transform.position, nextWaypoint, speed);
+
+            if (Vector3.Distance(transform.position, nextWaypoint) < 0.01f)
+            {
+                currentWaypointIndex++;
+            }
+        }
+        else
+        {
+            movement = new Vector3(-0.003f, 0, 0);
+            transform.position += movement * Time.deltaTime;
+        }
+
+        if (currentWaypointIndex >= path.Count)
+        {
+            FindPathToMouse();
+            currentWaypointIndex = 0;
+        }
+    }
+
+
 
     public enum State
     {
         Seek,
-        Shoot,
         Manuever
     }
 }
