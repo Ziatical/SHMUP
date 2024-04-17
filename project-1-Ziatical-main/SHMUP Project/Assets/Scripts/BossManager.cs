@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using System.IO;
 
 public class BossManager : MonoBehaviour
 {
@@ -12,26 +13,65 @@ public class BossManager : MonoBehaviour
     public GameObject mouse;
     public GameObject healthPotionPrefab;  // Assumed health potion prefab for interactions
     public float health = 100f;
-    private float maxHealth = 100;  // Max health
+    public float maxHealth = 100;  // Max health
     public Slider healthBar;
     private State currentState = State.singleShoot;
     private float shootTimer = 0;
-    private float stateTimer = 0;
     public int score;
     public Text scoreCounter;
+
+    public float speed = 100.0f; // Speed of the boss's circular movement
+    private float radius = 4.0f; // Radius of the circle along which the boss moves
+
+    private float moveDirection = 1.0f; // Direction indicator: 1 for up, -1 for down
+
+    private Vector3 initialPosition;
+
+    private float stateTimer = 0f;
+
+    //boss stuff
+
+    public float bossHealth = 200f;
+    public float maxBossHealth = 200;
+    public Slider bossHealthBar;
 
     // Start is called before the first frame update
     void Start()
     {
-        InvokeRepeating("ChangeState", 5f, 7f);  // Change state every 7 seconds, with first change after 5 seconds
+        initialPosition = cat.transform.position;
+        InvokeRepeating("ToggleShootState", 2f, 2f);  // Change state every 7 seconds, with first change after 5 seconds
+        InvokeRepeating("SpawnHealthPotion", 5f, 5f); // Spawn a health potion every 5 seconds
     }
 
     // Update is called once per frame
     void Update()
     {
         healthBar.value = health / maxHealth;
+        bossHealthBar.value = bossHealth / maxBossHealth;
+        stateTimer += Time.deltaTime;
+        MoveUpDown();
         HandleStates();
         CheckHealthStatus();
+
+        if (bossHealth <= 0)
+        {
+            SceneManager.LoadScene(0); // Assuming 0 is the menu or a game over scene
+        }
+    }
+
+    void MoveUpDown()
+    {
+        if (cat.transform.position.y >= initialPosition.y + radius)  // Check if cat is at the upper boundary
+        {
+            moveDirection = -1;  // Move down
+        }
+        else if (cat.transform.position.y <= initialPosition.y - radius)  // Check if cat is at the lower boundary
+        {
+            moveDirection = 1;  // Move up
+        }
+
+        // Update cat's vertical position
+        cat.transform.position += new Vector3(0, moveDirection * speed * Time.deltaTime, 0);
     }
 
     void HandleStates()
@@ -52,78 +92,164 @@ public class BossManager : MonoBehaviour
 
     void SingleShoot()
     {
+        shootTimer -= Time.deltaTime;
         if (shootTimer <= 0)
         {
-            Vector3 direction = (mouse.transform.position - cat.transform.position).normalized;
-            Shoot(direction);
-            shootTimer = 1.0f;  // Shoot every second
+            Shoot((mouse.transform.position - cat.transform.position).normalized);
+            shootTimer = 1f;  // Reset timer for single shooting
         }
-        shootTimer -= Time.deltaTime;
     }
 
     void MultiShoot()
     {
+        shootTimer -= Time.deltaTime;
         if (shootTimer <= 0)
         {
-            Vector3[] directions = new Vector3[]
-            {
+            Vector3[] directions = {
             Vector3.up, Vector3.down, Vector3.left, Vector3.right,
             new Vector3(1, 1, 0), new Vector3(1, -1, 0),
-            new Vector3(-1, 1, 0), new Vector3(-1, -1, 0)
-            };
+            new Vector3(-1, 1, 0), new Vector3(-1, -1, 0),
+            new Vector3(0.7f, 0.7f, 0), new Vector3(0.7f, -0.7f, 0),
+            new Vector3(-0.7f, 0.7f, 0), new Vector3(-0.7f, -0.7f, 0)
+        };
 
             foreach (var dir in directions)
             {
-                Shoot(dir.normalized);
+                Shoot(dir.normalized);  // Ensure directions are normalized
             }
-
-            shootTimer = 2.0f;  // MultiShoot for 2 seconds
+            shootTimer = 2f;  // Reset timer for the next MultiShoot
         }
-        shootTimer -= Time.deltaTime;
     }
 
     void Flee()
     {
-        // Implement fleeing logic
-        Vector3 dir = cat.transform.position - mouse.transform.position;
-        Vector3 newPos = cat.transform.position + dir.normalized * Time.deltaTime * 5;  // Example speed
-        cat.transform.position = new Vector3(
-            Mathf.Clamp(newPos.x, 0, Screen.width),
-            Mathf.Clamp(newPos.y, 0, Screen.height),
-            0);
+        LookForHealthPotions();
+        // Check if the boss is at or beyond the right edge of the screen
+        if (cat.transform.position.x >= Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, 0, 0)).x - 0.5f) // 0.5f as buffer for sprite size
+        {
+            // If at the right edge, move up and down
+            if (cat.transform.position.y >= initialPosition.y + radius)  // Check if cat is at the upper boundary
+            {
+                moveDirection = -1;  // Move down
+            }
+            else if (cat.transform.position.y <= initialPosition.y - radius)  // Check if cat is at the lower boundary
+            {
+                moveDirection = 1;  // Move up
+            }
+
+            // Update cat's vertical position
+            cat.transform.position += new Vector3(0, moveDirection * speed * Time.deltaTime, 0);
+        }
+        else
+        {
+            // If not at the edge, continue moving to the right
+            cat.transform.position += Vector3.right * speed * Time.deltaTime;
+        }
     }
 
-    void ChangeState()
+    void ToggleShootState()
     {
-        if (currentState == State.singleShoot)
-            currentState = State.multiShoot;
-        else
-            currentState = State.singleShoot;
+        // Toggle between SingleShoot and MultiShoot states
+        currentState = currentState == State.singleShoot ? State.multiShoot : State.singleShoot;
+        shootTimer = currentState == State.singleShoot ? 1f : 2f;  // Ensure this resets correctly
     }
 
     void CheckHealthStatus()
     {
-        if (health <= maxHealth * 0.25f)
+        if (bossHealth <= maxBossHealth * 0.25f)
+        {
             currentState = State.flee;
-        else if (health <= maxHealth * 0.50f)
             LookForHealthPotions();
+        }
+        else if (bossHealth <= maxBossHealth * 0.50f)
+        {
+            LookForHealthPotions(); // Ensure there's logic to handle this
+        }
+        else
+        {
+            if (cat.transform.position.x != initialPosition.x)
+            {
+                MoveBossToCenter();
+            }
+        }
+    }
+
+    void SpawnHealthPotion()
+    {
+        Vector3 spawnPosition = new Vector3(
+        Random.Range(Camera.main.ScreenToWorldPoint(new Vector3(0, 0, 0)).x,
+                     Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, 0, 0)).x),
+        Random.Range(Camera.main.ScreenToWorldPoint(new Vector3(0, 0, 0)).y,
+                     Camera.main.ScreenToWorldPoint(new Vector3(0, Screen.height, 0)).y),
+        0);
+
+        GameObject potion = Instantiate(healthPotionPrefab, spawnPosition, Quaternion.identity);
+        mouse.GetComponent<Mouse>().AddHealthPotion(potion.GetComponent<Health>());  // Assuming Mouse script has a method to add potions
     }
 
     void LookForHealthPotions()
     {
-        // Logic to check for nearby health potions and move towards them if found
+        GameObject nearestPotion = null;
+        float minDistance = float.MaxValue;
+
+        foreach (GameObject potion in GameObject.FindGameObjectsWithTag("HealthPotion"))
+        {
+            float distance = Vector3.Distance(cat.transform.position, potion.transform.position);
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                nearestPotion = potion;
+            }
+        }
+
+        if (nearestPotion != null)
+        {
+            cat.transform.position = Vector3.MoveTowards(cat.transform.position, nearestPotion.transform.position, speed * Time.deltaTime);
+            if (Vector3.Distance(cat.transform.position, nearestPotion.transform.position) < 0.5f) // If close enough to collect
+            {
+                bossHealth = Mathf.Min(maxBossHealth, bossHealth + 50); // Heal the boss
+                mouse.GetComponent<Mouse>().healths.Remove(nearestPotion.GetComponent<Health>());
+                Destroy(nearestPotion); // Remove the potion from the game
+                MoveBossToCenter();
+            }
+        }
+    }
+
+    void MoveBossToCenter()
+    {
+        // Move towards the initial position smoothly
+        cat.transform.position = Vector3.MoveTowards(cat.transform.position, initialPosition, speed * Time.deltaTime);
+        if (Vector3.Distance(cat.transform.position, initialPosition) < 0.1f) // Close enough to center
+        {
+            currentState = State.singleShoot; // Reset to normal behavior
+            InvokeRepeating("ToggleShootState", 2f, 2f); // Start toggling states again if needed
+            currentState = State.singleShoot; // Ensure state is reset to singleShoot to resume normal operation
+        }
     }
 
     void Shoot(Vector3 direction)
     {
-        GameObject bullet = Instantiate(bulletPrefab, cat.transform.position, Quaternion.identity);
-        HairballBullet bulletComponent = bullet.GetComponent<HairballBullet>();
+        if (bullets.Count < 100) // Ensure not to exceed bullet limit
+        {
+            GameObject bullet = Instantiate(bulletPrefab, cat.transform.position, Quaternion.identity);
+            HairballBullet bulletComponent = bullet.GetComponent<HairballBullet>();
 
-        // Assuming the bullet prefab's initial localScale.x is set correctly in the prefab for direction
-        float directionX = direction.x >= 0 ? 1 : -1;
-        bulletComponent.InitializeDirection(directionX);
+            // Check if currently in the MultiShoot state to scale the bullet
+            if (currentState == State.multiShoot)
+            {
+                bullet.transform.localScale = new Vector3(3, 3, 3); // Make the bullet three times larger
+            }
+            else
+            {
+                bullet.transform.localScale = new Vector3(1, 1, 1); // Normal size for other states
+            }
 
-        bullets.Add(bullet);
+            bulletComponent.InitializeDirection(direction);
+            bullets.Add(bullet);
+
+            // Debugging to visualize the direction
+            Debug.DrawRay(cat.transform.position, direction * 10, Color.red, 2f);
+        }
     }
 }
 

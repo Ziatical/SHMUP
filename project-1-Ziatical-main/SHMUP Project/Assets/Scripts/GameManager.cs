@@ -13,8 +13,6 @@ public class GameManager : MonoBehaviour
     public Slider healthBar;
     private Vector3 minPosition;
     private Vector3 maxPosition;
-    public int spawnTime = 2000000000;
-    private int spawnCheck = 0;
     public GameObject cat;
     public List<GameObject> cats = new List<GameObject>();
     public GameObject fox;
@@ -24,10 +22,14 @@ public class GameManager : MonoBehaviour
     // List of Rocks
     public List<Rock> rocks = new List<Rock>();
 
+    // time fix
+    public float spawnDelay = 1f; // Spawn every 5 seconds
+    private float spawnTimer = 0f;
+
     [SerializeField]
     private GameObject grass;
     [SerializeField]
-    private float cameraSpeed = 0.005f;
+    private float cameraSpeed = 0.02f;  // Adjust this value based on desired camera speed
     // Start is called before the first frame update
     void Start()
     {
@@ -39,25 +41,35 @@ public class GameManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (cats != null) {
-        for (int i = 0; i < cats.Count; i++)
+        if (cats != null)
         {
-            if (cats[i] == null) {
-                Debug.LogError($"Cat at index {i} is null.");
-                continue;
+            for (int i = 0; i < cats.Count; i++)
+            {
+                if (cats[i] == null) {
+                    Debug.LogError($"Cat at index {i} is null.");
+                    continue;
+                }
+                // Log positions and states
             }
-            // Log positions and states
         }
-    }
         minPosition = Camera.main.ScreenToWorldPoint(Vector3.zero);
         maxPosition = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, 0f));
-        if (maxPosition.x > 37f)
+        if (maxPosition.x > 58.5f)
         {
             SceneManager.LoadScene(2);
         }
-        healthBar.value = health/maxHealth;
-        scoreCounter.text = $"Score: {score.ToString("00000")}";
-        if (spawnCheck == spawnTime)
+        if (healthBar != null)
+        {
+            healthBar.value = health / maxHealth;
+        }
+        if (scoreCounter != null)
+        {
+            scoreCounter.text = $"Score: {score.ToString("00000")}";
+        }
+
+        spawnTimer += Time.deltaTime;
+
+        if (spawnTimer >= spawnDelay)
         {
             int num = Random.Range(0, 2);
             if (num == 0)
@@ -68,27 +80,27 @@ public class GameManager : MonoBehaviour
             {
                 foxes.Add(Instantiate(fox, new Vector3(maxPosition.x, Random.Range(minPosition.y, maxPosition.y), 0), Quaternion.identity));
             }
-            spawnCheck = -1;
+            spawnTimer = 0;
         }
-        spawnCheck++;
+        // resets health
         if (health <= 0)
         {
             SceneManager.LoadScene(0);
             health = 100;
         }
+
+        //moving camera
         Vector3 grassPos = Camera.main.transform.position;
-        //Vector3 grassStretch = grass.transform.localScale;
         grassPos.x += cameraSpeed;
-        //grassStretch.x += 0.005f;
         Camera.main.transform.position = grassPos;
-        //grass.transform.localScale = grassStretch;
 
         //Checking if Rocks collide with any Cats
+
         foreach (GameObject catG in cats)
         {
             foreach(Rock rock in rocks)
             {
-                if (rock.Colliding(catG) != null)
+                if (catG != null && rock.Colliding(catG) != null)
                 {
                     // Change state of cat to move around rock
                     // stop movement

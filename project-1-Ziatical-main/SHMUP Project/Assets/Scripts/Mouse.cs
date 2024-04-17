@@ -12,7 +12,8 @@ public class Mouse : MonoBehaviour
     private Vector2 movementInput;
     public List<GameObject> bullets = new List<GameObject>();
     public bool move = true;
-    public GameManager gameManager;
+    private GameManager gameManager;
+    private BossManager bossManager;
 
     //power up lists
     public List<Health> healths = new List<Health>();
@@ -29,6 +30,17 @@ public class Mouse : MonoBehaviour
     void Start()
     {
         
+    }
+    void Awake()
+    {
+        try
+        {
+            gameManager = GameObject.Find("GameManager").GetComponent<GameManager>();
+        }
+        catch
+        {
+            bossManager = GameObject.Find("BossManager").GetComponent<BossManager>();
+        }
     }
 
     // Update is called once per frame
@@ -49,21 +61,33 @@ public class Mouse : MonoBehaviour
         }
 
         //regen
-        if (healths[0] != null)
+        if (healths.Count > 0 && healths[0] != null)
         {
             foreach (Health hea in healths)
             {
                 if (hea.Colliding(this.gameObject) != null)
                 {
-                    hea.currentSprite.enabled = false;
                     currentHealth = hea;
+                    healths.Remove(hea);
+                    Destroy(hea);
                     currentHealth.countdown = true;
+                    break;
                 }
             }
         }
-        if (currentHealth != null && currentHealth.countdown && gameManager.health < gameManager.maxHealth)
+        if (gameManager != null)
         {
-            gameManager.health += 0.5f;
+            if (currentHealth != null && currentHealth.countdown && gameManager.health < gameManager.maxHealth)
+            {
+                gameManager.health += 0.5f;
+            }
+        }
+        else
+        {
+            if (currentHealth != null && currentHealth.countdown && bossManager.health < bossManager.maxHealth)
+            {
+                bossManager.health += 0.5f;
+            }
         }
 
         if (slows[0] != null)
@@ -81,58 +105,86 @@ public class Mouse : MonoBehaviour
         }
         if (currentSlow != null && currentSlow.countdown)
         {
-            foreach (GameObject cat in gameManager.cats)
+            if (gameManager != null)
             {
-                Cat catS = cat.GetComponent<Cat>();
-                catS.speed = 0.001f;
-            }
-            foreach(GameObject fox in gameManager.foxes)
-            {
-                Fox foxS = fox.GetComponent<Fox>();
-                foxS.speed = 0.001f;
+                foreach (GameObject cat in gameManager.cats)
+                {
+                    Cat catS = cat.GetComponent<Cat>();
+                    catS.speed = 0.001f;
+                }
+                foreach (GameObject fox in gameManager.foxes)
+                {
+                    Fox foxS = fox.GetComponent<Fox>();
+                    foxS.speed = 0.001f;
+                }
             }
         }
         else
         {
-            foreach (GameObject cat in gameManager.cats)
+            if (gameManager != null)
             {
-                Cat catS = cat.GetComponent<Cat>();
-                catS.speed = 0.003f;
-            }
-            foreach (GameObject fox in gameManager.foxes)
-            {
-                Fox foxS = fox.GetComponent<Fox>();
-                foxS.speed = 0.003f;
+                if (gameManager.cats != null)
+                {
+                    foreach (GameObject cat in gameManager.cats)
+                    {
+                        if (cat != null)
+                        {
+                            Cat catS = cat.GetComponent<Cat>();
+                            catS.speed = 0.003f;
+                        }
+                    }
+                }
+                if (gameManager.foxes != null)
+                {
+                    foreach (GameObject fox in gameManager.foxes)
+                    {
+                        if (fox != null)
+                        {
+                            Fox foxS = fox.GetComponent<Fox>();
+                            foxS.speed = 0.003f;
+                        }
+                    }
+                }
             }
         }
         ScreenStop();
         if (move)
         {
-            direction = movementInput;
-            velocity = direction * speed * Time.deltaTime;
-            if (faster[0] != null)
+            HandleMovement();
+        }
+    }
+
+    void HandleMovement()
+    {
+        direction = movementInput;
+        velocity = direction * speed * Time.deltaTime;
+        AdjustVelocityForFaster();
+        transform.position += (Vector3)velocity;
+
+        // Flip mouse based on movement direction
+        if (direction.x < 0)
+            transform.localScale = new Vector3(-1, 1, 1);
+        else if (direction.x > 0)
+            transform.localScale = new Vector3(1, 1, 1);
+    }
+
+    void AdjustVelocityForFaster()
+    {
+        if (faster != null && faster.Count > 0)  // Check if the list is not null and has elements
+        {
+            foreach (Faster fast in faster)
             {
-                foreach (Faster fast in faster)
+                if (fast != null && fast.Colliding(this.gameObject) != null)
                 {
-                    if (fast.Colliding(this.gameObject) != null)
-                    {
-                        fast.currentSprite.enabled = false;
-                        currentFaster = fast;
-                        currentFaster.countdown = true;
-                    }
+                    fast.currentSprite.enabled = false;
+                    currentFaster = fast;
+                    currentFaster.countdown = true;
                 }
             }
-            if (currentFaster != null && currentFaster.countdown)
-            {
-                velocity = velocity * 2;
-            }
-            transform.position += (Vector3)velocity;
-
-            // Flip mouse based on movement direction
-            if (direction.x < 0)
-                transform.localScale = new Vector3(-1, 1, 1);
-            else if (direction.x > 0)
-                transform.localScale = new Vector3(1, 1, 1);
+        }
+        if (currentFaster != null && currentFaster.countdown)
+        {
+            velocity *= 2;
         }
     }
 
@@ -158,6 +210,11 @@ public class Mouse : MonoBehaviour
             bullet.GetComponent<CheeseBullet>().SetMovementDirection(transform.localScale.x); // Add this method to CheeseBullet
             bullets.Add(bullet);
         }
+    }
+
+    public void AddHealthPotion(Health potion)
+    {
+        healths.Add(potion);
     }
 
     //stop at edge of screen

@@ -9,12 +9,15 @@ public class Cat : MonoBehaviour
     public Vector3 movement;
     public GameObject mouse;
     public GameManager gameManager;
-    private int timeToShoot;
+    private float timeToShoot = 1000;
     public List<GameObject> bullets = new List<GameObject>();
     public GameObject hairballBullet;
 
+    private const float shootingInterval = 1000; // Interval between shots in milliseconds
+
+
     //A* Stuff
-    public float speed = 0.003f; // Adjust speed as needed
+    public float speed = 0.01f;  // Increase the speed value here
     private List<Coordinate> path; // Store the path from cat to mouse
     private int currentWaypointIndex = 0; // Index of current waypoint in the path
 
@@ -34,7 +37,7 @@ public class Cat : MonoBehaviour
         movement = new Vector3(-0.003f, 0, 0);
         minPosition = Camera.main.ScreenToWorldPoint(Vector3.zero);
         maxPosition = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, 0f));
-        timeToShoot = 0;
+        timeToShoot = shootingInterval; // Start with a full interval to first shot
     }
 
     // Update is called once per frame
@@ -49,96 +52,111 @@ public class Cat : MonoBehaviour
             Destroy(this.gameObject);
             gameManager.score += 20;
         }
-        //sprites
-        SpriteRenderer mouseSprite = mouse.GetComponent<SpriteRenderer>();
-        SpriteRenderer catSprite = this.GetComponent<SpriteRenderer>();
-
-        //sprite location min and max x and y
-        Vector2 maxXY1 = mouseSprite.bounds.max;
-        Vector2 minXY1 = mouseSprite.bounds.min;
-
-        Vector2 maxXY2 = catSprite.bounds.max;
-        Vector2 minXY2 = catSprite.bounds.max;
-        if(((minXY1.x < maxXY2.x) && (maxXY1.x > minXY2.x)) && ((maxXY1.y > minXY2.y) && (minXY1.y < maxXY2.y)))
-        {
-            gameManager.cats.Remove(this.gameObject);
-            Destroy(this.gameObject);
-            gameManager.health -= 10;
-        }
-
-        // Calculate positions and determine the direction to face based on the mouse's position
-        Vector3 mousePosition = mouse.transform.position;
-
-        // Flipping logic based on relative position to the mouse
-        if (transform.position.x < mousePosition.x && transform.localScale.x != 1)
-        {
-            // Face right when mouse is to the right
-            transform.localScale = new Vector3(1, 1, 1);
-        }
-        else if (transform.position.x > mousePosition.x && transform.localScale.x != -1)
-        {
-            // Face left when mouse is to the left
-            transform.localScale = new Vector3(-1, 1, 1);
-        }
-
-        // Update position and handle flipping
-        if (currentState == State.Seek)
-        {
-            FindPathToMouse();
-            MoveAlongPath();
-        }
-        else if (currentState == State.Manuever)
-        {
-            //getting issued rock
-            foreach (Rock rock in gameManager.rocks)
-            {
-                // Check collision with the current rock
-                if (rock.Colliding(this.gameObject) != null)
-                {
-                    // Collision detected with a rock, update movement and exit loop
-                    if (this.gameObject.transform.position.y > Screen.height / 2)
-                    {
-                        movement = new Vector3(0, -0.003f, 0);
-                        issuedRock = rock;
-                        break;
-                    }
-                    else if (this.gameObject.transform.position.y <= Screen.height / 2)
-                    {
-                        movement = new Vector3(0, 0.003f, 0);
-                        issuedRock = rock;
-                        break;
-                    }
-                }
-
-            }
-            if (issuedRock == null || issuedRock.Colliding(this.gameObject) == null)
-            {
-                movement = new Vector3(-0.003f, 0, 0);
-                currentState = State.Seek;
-            }
-        }
 
         HandleFlipping();
+        HandleSpriteCollision();
+        HandleStateManagement();
+        HandleShooting();
+    }
 
-        if (timeToShoot >= 1000)
+    void HandleStateManagement()
+    {
+        switch (currentState)
         {
-            bullets.Add(Instantiate(hairballBullet, new Vector3((this.gameObject.transform.position.x - .2f), this.gameObject.transform.position.y, 0f), Quaternion.identity));
-            timeToShoot = 0;
+            case State.Seek:
+                FindPathToMouse();
+                MoveAlongPath();
+                break;
+            case State.Manuever:
+                ManageObstacleAvoidance();
+                break;
         }
-        timeToShoot++;
+    }
 
+    void HandleSpriteCollision()
+    {
+        SpriteRenderer catSprite = GetComponent<SpriteRenderer>();
+        SpriteRenderer mouseSprite = mouse.GetComponent<SpriteRenderer>();
+
+        // Use Bounds.Intersects for checking overlap
+        if (catSprite.bounds.Intersects(mouseSprite.bounds))
+        {
+            ProcessCollisionWithMouse();
+        }
+    }
+
+    void ProcessCollisionWithMouse()
+    {
+        gameManager.cats.Remove(gameObject);
+        Destroy(gameObject);
+        gameManager.health -= 10;
+    }
+
+    void HandleShooting()
+    {
+        // Decrement the shoot timer by the elapsed time in milliseconds
+        timeToShoot -= Time.deltaTime * 1000;
+
+        if (timeToShoot <= 0)
+        {
+            Shoot();
+            timeToShoot = shootingInterval; // Reset the timer after shooting
+        }
+    }
+
+    void Shoot()
+    {
+        // Determine the shooting direction based on the current facing direction
+        Vector3 shootDirection = transform.localScale.x < 0 ? Vector3.left : Vector3.right;
+
+        // Instantiate the bullet and initialize its direction
+        GameObject bullet = Instantiate(hairballBullet, transform.position + shootDirection * 0.2f, Quaternion.identity);
+        HairballBullet bulletComponent = bullet.GetComponent<HairballBullet>();
+        bulletComponent.InitializeDirection(shootDirection); // Now correctly passing Vector3
+        bullets.Add(bullet);
+    }
+
+    void ManageObstacleAvoidance()
+    {
+        //getting issued rock
+        foreach (Rock rock in gameManager.rocks)
+        {
+            // Check collision with the current rock
+            if (rock.Colliding(this.gameObject) != null)
+            {
+                // Collision detected with a rock, update movement and exit loop
+                if (this.gameObject.transform.position.y > Screen.height / 2)
+                {
+                    movement = new Vector3(0, -0.003f, 0);
+                    issuedRock = rock;
+                    
+                }
+                else if (this.gameObject.transform.position.y <= Screen.height / 2)
+                {
+                    movement = new Vector3(0, 0.003f, 0);
+                    issuedRock = rock;
+                    
+                }
+            }
+
+        }
+        if (issuedRock == null || issuedRock.Colliding(this.gameObject) == null)
+        {
+            movement = new Vector3(-0.003f, 0, 0);
+            currentState = State.Seek;
+        }
     }
 
     void HandleFlipping()
     {
         Vector3 mousePosition = mouse.transform.position;
         SpriteRenderer spriteRenderer = GetComponent<SpriteRenderer>();
-
-        // Determine if the character should face left or right based on the mouse position
-        bool shouldFaceLeft = transform.position.x > mousePosition.x;
-
-        // Use SpriteRenderer's flipX to control the direction the sprite faces
-        spriteRenderer.flipX = shouldFaceLeft;
+        // Determine the direction opposite to the current logic
+        bool shouldFaceLeft = transform.position.x <= mousePosition.x;  // Reverse the condition
+        if (spriteRenderer.flipX != shouldFaceLeft)
+        {
+            spriteRenderer.flipX = shouldFaceLeft;
+        }
     }
 
     // Find a path from the cat's current position to the mouse's position
@@ -171,12 +189,6 @@ public class Cat : MonoBehaviour
     {
         if (path != null && currentWaypointIndex < path.Count)
         {
-            if (mouse == null)
-            {
-                Debug.LogError("Mouse reference lost, stopping movement.");
-                return; // Stop updating the path if the mouse is destroyed or lost
-            }
-
             Vector3 nextWaypoint = new Vector3(path[currentWaypointIndex].x, path[currentWaypointIndex].y, transform.position.z);
             transform.position = Vector3.MoveTowards(transform.position, nextWaypoint, speed);
 
@@ -184,17 +196,12 @@ public class Cat : MonoBehaviour
             {
                 currentWaypointIndex++;
             }
-        }
-        else
-        {
-            movement = new Vector3(-0.003f, 0, 0);
-            transform.position += movement * Time.deltaTime;
-        }
 
-        if (currentWaypointIndex >= path.Count)
-        {
-            FindPathToMouse();
-            currentWaypointIndex = 0;
+            if (currentWaypointIndex >= path.Count)
+            {
+                FindPathToMouse();
+                currentWaypointIndex = 0;
+            }
         }
     }
 

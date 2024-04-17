@@ -9,16 +9,24 @@ public class CheeseBullet : MonoBehaviour
     private Vector3 maxPosition;
     Mouse mouse;
     GameManager gameManager;
+    BossManager bossManager;
 
     void Awake()
     {
-        gameManager = GameObject.Find("GameManager").GetComponent<GameManager>();
+        try
+        {
+            gameManager = GameObject.Find("GameManager").GetComponent<GameManager>();
+        }
+        catch
+        {
+            bossManager = GameObject.Find("BossManager").GetComponent<BossManager>();
+        }
         mouse = GameObject.Find("Mouse").GetComponent<Mouse>();
     }
     // Start is called before the first frame update
     void Start()
     {
-        movement = (transform.localScale.x < 0 ? new Vector3(-0.015f, 0, 0) : new Vector3(0.015f, 0, 0)); // Speed set to match current speed but direction is dynamic
+        movement = (transform.localScale.x < 0 ? new Vector3(-0.1f, 0, 0) : new Vector3(0.1f, 0, 0)); // Speed set to match current speed but direction is dynamic
         minPosition = Camera.main.ScreenToWorldPoint(Vector3.zero);
         maxPosition = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, 0f));
     }
@@ -28,7 +36,8 @@ public class CheeseBullet : MonoBehaviour
     {
         minPosition = Camera.main.ScreenToWorldPoint(Vector3.zero);
         maxPosition = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, 0f));
-        transform.position += movement;
+        // Assuming speed should be scaled by deltaTime to ensure frame-independent movement
+        transform.position += movement * Time.deltaTime * 100;  // Adjust the multiplier to control speed
         if (transform.position.x <= minPosition.x || transform.position.x >= maxPosition.x)
         {
             SafeDestroy();
@@ -40,41 +49,61 @@ public class CheeseBullet : MonoBehaviour
         Vector2 maxXY2 = bulletSprite.bounds.max;
         Vector2 minXY2 = bulletSprite.bounds.min;
         //IF IT COLLIDES WITH A CAT
-        foreach (GameObject cat in gameManager.cats)
+        if (gameManager != null)
         {
-            SpriteRenderer catSprite = cat.GetComponent<SpriteRenderer>();
-
-            //Sprite location for cat
-            Vector2 maxXY1 = catSprite.bounds.max;
-            Vector2 minXY1 = catSprite.bounds.min;
-
-            //removes bullet and destroys bullet if collision
-            if((minXY1.x < maxXY2.x) && (maxXY1.x > minXY2.x) && (maxXY1.y > minXY2.y) && (minXY1.y < maxXY2.y))
+            foreach (GameObject cat in gameManager.cats)
             {
-                mouse.bullets.Remove(this.gameObject);
-                Destroy(this.gameObject);
-                gameManager.cats.Remove(cat);
-                Destroy(cat);
-                return;
+                SpriteRenderer catSprite = cat.GetComponent<SpriteRenderer>();
+
+                //Sprite location for cat
+                Vector2 maxXY1 = catSprite.bounds.max;
+                Vector2 minXY1 = catSprite.bounds.min;
+
+                //removes bullet and destroys bullet if collision
+                if ((minXY1.x < maxXY2.x) && (maxXY1.x > minXY2.x) && (maxXY1.y > minXY2.y) && (minXY1.y < maxXY2.y))
+                {
+                    mouse.bullets.Remove(this.gameObject);
+                    Destroy(this.gameObject);
+                    gameManager.cats.Remove(cat);
+                    Destroy(cat);
+                    return;
+                }
+            }
+            foreach (GameObject fox in gameManager.foxes)
+            {
+                SpriteRenderer foxSprite = fox.GetComponent<SpriteRenderer>();
+
+                //Sprite location for cat
+                Vector2 maxXY3 = foxSprite.bounds.max;
+                Vector2 minXY3 = foxSprite.bounds.min;
+
+                //removes bullet and destroys bullet if collision
+                if ((minXY3.x < maxXY2.x) && (maxXY3.x > minXY2.x) && (maxXY3.y > minXY2.y) && (minXY3.y < maxXY2.y))
+                {
+                    mouse.bullets.Remove(this.gameObject);
+                    Destroy(this.gameObject);
+                    gameManager.foxes.Remove(fox);
+                    Destroy(fox);
+                    gameManager.score += 30;
+                    return;
+                }
             }
         }
-        foreach (GameObject fox in gameManager.foxes)
+        else
         {
-            SpriteRenderer foxSprite = fox.GetComponent<SpriteRenderer>();
+            SpriteRenderer bossCatSprite = bossManager.cat.GetComponent<SpriteRenderer>();
 
-            //Sprite location for cat
-            Vector2 maxXY3 = foxSprite.bounds.max;
-            Vector2 minXY3 = foxSprite.bounds.min;
+            //Sprite location for boss cat
+            Vector2 maxXY3 = bossCatSprite.bounds.max;
+            Vector2 minXY3 = bossCatSprite.bounds.min;
 
+            // removes bullet and damages the boss cat
             //removes bullet and destroys bullet if collision
-            if((minXY3.x < maxXY2.x) && (maxXY3.x > minXY2.x) && (maxXY3.y > minXY2.y) && (minXY3.y < maxXY2.y))
+            if ((minXY3.x < maxXY2.x) && (maxXY3.x > minXY2.x) && (maxXY3.y > minXY2.y) && (minXY3.y < maxXY2.y))
             {
                 mouse.bullets.Remove(this.gameObject);
                 Destroy(this.gameObject);
-                gameManager.foxes.Remove(fox);
-                Destroy(fox);
-                gameManager.score += 30;
-                return;
+                bossManager.bossHealth -= 30;
             }
         }
     }
